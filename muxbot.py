@@ -8,18 +8,21 @@ from pyrogram.raw.all import layer
 import pyrogram
 from pyrogram import Client, __version__
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[logging.FileHandler('log.txt'), logging.StreamHandler()],
-    level=logging.INFO)
+    level=logging.INFO,
+)
 LOGGER = logging.getLogger(__name__)
 botStartTime = time.time()
 
 plugins = dict(root='plugins')
 
 if not os.path.isdir(Config.DOWNLOAD_DIR):
-        os.mkdir(Config.DOWNLOAD_DIR)
+    os.mkdir(Config.DOWNLOAD_DIR)
 if not os.path.isdir(Config.ENCODE_DIR):
-        os.mkdir(Config.ENCODE_DIR)
+    os.mkdir(Config.ENCODE_DIR)
+
 
 class Bot(Client):
 
@@ -35,19 +38,58 @@ class Bot(Client):
         )
 
     async def start(self):
-        if not os.path.isdir(Config.DOWNLOAD_DIR): os.makedirs(Config.DOWNLOAD_DIR)
+        # Ensure download dir exists
+        if not os.path.isdir(Config.DOWNLOAD_DIR):
+            os.makedirs(Config.DOWNLOAD_DIR)
+
         await super().start()
-        owner = await self.get_chat(Config.OWNER_ID)
-        print(owner)
+
+        # Get owner and me info
+        try:
+            owner = await self.get_chat(Config.OWNER_ID)
+            print(owner)
+        except Exception as e:
+            LOGGER.warning(f"Could not get owner chat: {e}")
+
         me = await self.get_me()
-        self.username = '@' + me.username
-        LOGGER.info(f"{me.first_name} with for Pyrogram v{__version__} (Layer {layer}) started on {me.username}. Premium {me.is_premium}.")
+        self.username = '@' + me.username if me and me.username else None
+        LOGGER.info(
+            f"{me.first_name} with for Pyrogram v{__version__} (Layer {layer}) started on {me.username}. Premium {me.is_premium}."
+        )
+
+        # Notify owner that bot started
         if Config.OWNER_ID != 0:
             try:
-                await self.send_message(text="Karanlığın küllerinden yeniden doğdum.",
-                    chat_id=Config.OWNER_ID)
+                await self.send_message(text="Karanlığın küllerinden yeniden doğdum.", chat_id=Config.OWNER_ID)
             except Exception as t:
                 LOGGER.error(str(t))
+
+        # Determine log channel: try common config names, fallback to owner id
+        log_chat = getattr(Config, "LOG_CHANNEL_ID", None) or getattr(Config, "LOG_CHANNEL", None) or Config.OWNER_ID
+
+        # Check session activity and send the required message to log channel
+        try:
+            session_active = await self._check_session_active()
+            if session_active:
+                await self.send_message(chat_id=log_chat, text="4GB aktif")
+            else:
+                await self.send_message(chat_id=log_chat, text="4GB aktif değil")
+        except Exception as e:
+            LOGGER.warning(f"Failed to send session status message: {e}")
+
+    async def _check_session_active(self) -> bool:
+        """
+        Tries a light API call to confirm the session is active.
+        Returns True if the call succeeds, False otherwise.
+        """
+        try:
+            # get_me is lightweight and will fail if session isn't valid/connected
+            me = await self.get_me()
+            # If we got a valid user, session is active
+            return me is not None
+        except Exception as e:
+            LOGGER.debug(f"_check_session_active failed: {e}")
+            return False
 
     async def stop(self, *args):
         if Config.OWNER_ID != 0:
@@ -59,6 +101,7 @@ class Bot(Client):
         await super().stop()
         LOGGER.info(msg="App Stopped.")
         exit()
+
 
 app = Bot()
 app.run()
