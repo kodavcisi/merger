@@ -41,45 +41,67 @@ async def softmux(bot, message, cb=False):
     thumb = get_thumbnail(video, './' + Config.DOWNLOAD_DIR, duration / 4)
     width, height = get_width_height(video)
     file_size = os.stat(video).st_size
-    if file_size > 2093796556:
-        copy = await Config.userbot.send_document(
-                chat_id = Config.PRE_LOG, 
-                progress = progress_bar, 
-                progress_args = (
-                    'Dosyan Yükleniyor!',
-                    sent_msg,
-                    start_time
-                    ), 
-                document = video,
-                caption = final_filename
-                )
-        text = 'Dosyan Başarı İle Yüklendi!\nGeçen Toplam Zaman : {} saniye'.format(round(time.time()-start_time))
-        await sent_msg.edit(text)
-        await bot.copy_message(
-            chat_id=chat_id, 
-            from_chat_id=Config.PRE_LOG, 
-            message_id=copy.id)
-    else:
-        copy = await bot.send_document(
-                chat_id = chat_id, 
-                progress = progress_bar, 
-                progress_args = (
-                    'Dosyan Yükleniyor!',
-                    sent_msg,
-                    start_time
-                    ), 
-                document = video,
-                caption = final_filename
-                )
-        text = 'Dosyan Başarı İle Yüklendi!\nGeçen Toplam Zaman : {} saniye'.format(round(time.time()-start_time))
-        await sent_msg.edit(text)
-    path = Config.DOWNLOAD_DIR+'/'
-    os.remove(path+og_sub_filename)
-    os.remove(path+og_vid_filename)
-    try :
-        os.remove(path+final_filename)
-    except :
-        pass
+    
+    try:
+        if file_size > 2093796556:
+            copy = await Config.userbot.send_document(
+                    chat_id = Config.PRE_LOG, 
+                    progress = progress_bar, 
+                    progress_args = (
+                        'Dosyan Yükleniyor!',
+                        sent_msg,
+                        start_time
+                        ), 
+                    document = video,
+                    caption = final_filename
+                    )
+            text = 'Dosyan Başarı İle Yüklendi!\nGeçen Toplam Zaman : {} saniye'.format(round(time.time()-start_time))
+            await sent_msg.edit(text)
+            await bot.copy_message(
+                chat_id=chat_id, 
+                from_chat_id=Config.PRE_LOG, 
+                message_id=copy.id)
+        else:
+            copy = await bot.send_document(
+                    chat_id = chat_id, 
+                    progress = progress_bar, 
+                    progress_args = (
+                        'Dosyan Yükleniyor!',
+                        sent_msg,
+                        start_time
+                        ), 
+                    document = video,
+                    caption = final_filename
+                    )
+            text = 'Dosyan Başarı İle Yüklendi!\nGeçen Toplam Zaman : {} saniye'.format(round(time.time()-start_time))
+            await sent_msg.edit(text)
+    finally:
+        # Clean up all files after upload (success or failure)
+        path = Config.DOWNLOAD_DIR+'/'
+        # Remove original subtitle file
+        try:
+            if og_sub_filename and os.path.exists(path+og_sub_filename):
+                os.remove(path+og_sub_filename)
+        except Exception as e:
+            pass
+        # Remove original video file
+        try:
+            if og_vid_filename and os.path.exists(path+og_vid_filename):
+                os.remove(path+og_vid_filename)
+        except Exception as e:
+            pass
+        # Remove encoded/muxed video file
+        try:
+            if final_filename and os.path.exists(path+final_filename):
+                os.remove(path+final_filename)
+        except Exception as e:
+            pass
+        # Remove thumbnail file
+        try:
+            if thumb and os.path.exists(thumb):
+                os.remove(thumb)
+        except Exception as e:
+            pass
 
     db.erase(chat_id)
 
@@ -116,55 +138,77 @@ async def hardmux(bot, message, cb=False):
     width, height = get_width_height(video)
     start_time = time.time()
     file_size = os.stat(video).st_size
-    if file_size > 2093796556:
-        copy = await Config.userbot.send_video(
-                chat_id = Config.PRE_LOG, 
-                progress = progress_bar,
-                duration = duration,
-                thumb = thumb,
-                width = width,
-                height = height,
-                supports_streaming=True,
-                progress_args = (
-                    'Dosyan Yükleniyor!',
-                    sent_msg,
-                    start_time
-                    ), 
-                video = video,
-                caption = final_filename
-                )
-        text = 'Dosya Başarı İle Yüklendi!\nToplam Geçen zaman : {} saniye'.format(round(time.time()-start_time))
-        await sent_msg.edit(text)
-        await bot.copy_message(
-            chat_id=chat_id, 
-            from_chat_id=Config.PRE_LOG, 
-            message_id=copy.id)
-    else:
-        copy = await bot.send_video(
-                chat_id = chat_id, 
-                progress = progress_bar,
-                duration = duration,
-                thumb = thumb,
-                width = width,
-                height = height,
-                supports_streaming=True,
-                progress_args = (
-                    'Dosyan Yükleniyor!',
-                    sent_msg,
-                    start_time
-                    ), 
-                video = video,
-                caption = final_filename
-                )
-        text = 'Dosya Başarı İle Yüklendi!\nToplam Geçen zaman : {} saniye'.format(round(time.time()-start_time))
-        await sent_msg.edit(text)
+    
+    try:
+        if file_size > 2093796556:
+            copy = await Config.userbot.send_video(
+                    chat_id = Config.PRE_LOG, 
+                    progress = progress_bar,
+                    duration = duration,
+                    thumb = thumb,
+                    width = width,
+                    height = height,
+                    supports_streaming=True,
+                    progress_args = (
+                        'Dosyan Yükleniyor!',
+                        sent_msg,
+                        start_time
+                        ), 
+                    video = video,
+                    caption = final_filename
+                    )
+            text = 'Dosya Başarı İle Yüklendi!\nToplam Geçen zaman : {} saniye'.format(round(time.time()-start_time))
+            await sent_msg.edit(text)
+            await bot.copy_message(
+                chat_id=chat_id, 
+                from_chat_id=Config.PRE_LOG, 
+                message_id=copy.id)
+        else:
+            copy = await bot.send_video(
+                    chat_id = chat_id, 
+                    progress = progress_bar,
+                    duration = duration,
+                    thumb = thumb,
+                    width = width,
+                    height = height,
+                    supports_streaming=True,
+                    progress_args = (
+                        'Dosyan Yükleniyor!',
+                        sent_msg,
+                        start_time
+                        ), 
+                    video = video,
+                    caption = final_filename
+                    )
+            text = 'Dosya Başarı İle Yüklendi!\nToplam Geçen zaman : {} saniye'.format(round(time.time()-start_time))
+            await sent_msg.edit(text)
+    finally:
+        # Clean up all files after upload (success or failure)
+        path = Config.DOWNLOAD_DIR+'/'
+        # Remove original subtitle file
+        try:
+            if og_sub_filename and os.path.exists(path+og_sub_filename):
+                os.remove(path+og_sub_filename)
+        except Exception as e:
+            pass
+        # Remove original video file
+        try:
+            if og_vid_filename and os.path.exists(path+og_vid_filename):
+                os.remove(path+og_vid_filename)
+        except Exception as e:
+            pass
+        # Remove encoded/muxed video file
+        try:
+            if final_filename and os.path.exists(path+final_filename):
+                os.remove(path+final_filename)
+        except Exception as e:
+            pass
+        # Remove thumbnail file
+        try:
+            if thumb and os.path.exists(thumb):
+                os.remove(thumb)
+        except Exception as e:
+            pass
             
-    path = Config.DOWNLOAD_DIR+'/'
-    os.remove(path+og_sub_filename)
-    os.remove(path+og_vid_filename)
-    try :
-        os.remove(path+final_filename)
-    except :
-        pass
     db.erase(chat_id)
 
