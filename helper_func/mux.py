@@ -1,4 +1,3 @@
-
 from config import Config
 import time
 import re
@@ -8,6 +7,7 @@ import asyncio
 progress_pattern = re.compile(
     r'(frame|fps|size|time|bitrate|speed)\s*\=\s*(\S+)'
 )
+
 
 def parse_progress(line):
     items = {
@@ -31,114 +31,112 @@ async def readlines(stream):
         data.extend(await stream.read(1024))
 
 async def read_stderr(start, msg, process):
+    last_update = -1
     async for line in readlines(process.stderr):
-            line = line.decode('utf-8')
-            progress = parse_progress(line)
-            if progress:
-                #Progress bar logic
-                now = time.time()
-                diff = start-now
-                text = 'İLERLEME\n'
-                text += 'Boyut : {}\n'.format(progress['size'])
-                text += 'Süre : {}\n'.format(progress['time'])
-                text += 'Hız : {}\n'.format(progress['speed'])
+        line = line.decode('utf-8', errors='ignore')
+        progress = parse_progress(line)
+        if progress:
+            now = time.time()
+            elapsed = int(now - start)
+            text = 'İLERLEME\n'
+            text += 'Boyut : {}\n'.format(progress.get('size', 'N/A'))
+            text += 'Süre : {}\n'.format(progress.get('time', 'N/A'))
+            text += 'Hız : {}\n'.format(progress.get('speed', 'N/A'))
 
-                if round(diff % 5)==0:
-                    try:
-                        await msg.edit(text=text)
-                    except Exception as e:
-                        print(e)
+            # 5 saniyelik aralıkla güncelleme (throttle)
+            if elapsed // 5 != last_update // 5:
+                last_update = elapsed
+                try:
+                    await msg.edit(text=text)
+                except Exception as e:
+                    print(e)
 
 async def softmux_vid(vid_filename, sub_filename, msg):
 
     start = time.time()
-    vid = Config.DOWNLOAD_DIR+'/'+vid_filename
-    sub = Config.DOWNLOAD_DIR+'/'+sub_filename
+    vid = Config.DOWNLOAD_DIR + '/' + vid_filename
+    sub = Config.DOWNLOAD_DIR + '/' + sub_filename
 
     out_file = '.'.join(vid_filename.split('.')[:-1])
-    output = out_file+'1.mkv'
-    out_location = Config.DOWNLOAD_DIR+'/'+output
+    output = out_file + '1.mkv'
+    out_location = Config.DOWNLOAD_DIR + '/' + output
     sub_ext = sub_filename.split('.').pop()
     command = [
-            'ffmpeg','-hide_banner',
-            '-i',vid,
-            '-i',sub,
-            '-map','1:0','-map','0',
-            '-disposition:s:0','default',
-            '-c:v','copy',
-            '-c:a','copy',
-            '-c:s',sub_ext,
-            '-y',out_location
-            ]
+        'ffmpeg', '-hide_banner',
+        '-i', vid,
+        '-i', sub,
+        '-map', '1:0', '-map', '0',
+        '-disposition:s:0', 'default',
+        '-c:v', 'copy',
+        '-c:a', 'copy',
+        '-c:s', sub_ext,
+        '-y', out_location
+    ]
 
     process = await asyncio.create_subprocess_exec(
-            *command,
-            # stdout must a pipe to be accessible as process.stdout
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            )
+        *command,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
 
-    # https://github.com/jonghwanhyeon/python-ffmpeg/blob/ccfbba93c46dc0d2cafc1e40ecb71ebf3b5587d2/ffmpeg/ffmpeg.py#L114
-    
     await asyncio.wait([
-            read_stderr(start,msg, process),
-            process.wait(),
-        ])
-    
+        read_stderr(start, msg, process),
+        process.wait(),
+    ])
+
     if process.returncode == 0:
-        await msg.edit('Altyazı Ekleme Başarı İle Tamamlandı!\n\nGeçen Süre : {} saniye'.format(round(start-time.time())))
+        elapsed = round(time.time() - start)
+        await msg.edit('Altyazı Ekleme Başarı İle Tamamlandı!\n\nGeçen Süre : {} saniye'.format(elapsed))
     else:
         await msg.edit('Altyazı Eklenirken Bir Hata Oluştu!')
         return False
-    time.sleep(2)
+    await asyncio.sleep(2)
     return output
 
 
 async def hardmux_vid(vid_filename, sub_filename, msg):
-    
+
     start = time.time()
-    vid = Config.DOWNLOAD_DIR+'/'+vid_filename
-    sub = Config.DOWNLOAD_DIR+'/'+sub_filename
-    
+    vid = Config.DOWNLOAD_DIR + '/' + vid_filename
+    sub = Config.DOWNLOAD_DIR + '/' + sub_filename
+
     out_file = '.'.join(vid_filename.split('.')[:-1])
-    output = out_file+'1.mp4'
-    out_location = Config.DOWNLOAD_DIR+'/'+output
-    
+    output = out_file + '1.mp4'
+    out_location = Config.DOWNLOAD_DIR + '/' + output
+
     command = [
         'ffmpeg', '-hide_banner',
         '-i', vid,
-        '-vf', 'subtitles=' + sub + ',scale=-2:720',  # 720p ölçekleme (-2 genişlik otomatik ayarlanır)
-        '-c:v', 'libx264',  # video codec
-        '-b:v', '2300k',    # video bitrate
+        '-vf', 'subtitles=' + sub + ',scale=-2:720',
+        '-c:v', 'libx264',
+        '-b:v', '2300k',
         '-map', '0:v:0',
-        '-c:a', 'aac',      # ses codec
-        '-ac', '2',         # stereo (2 kanal)
-        '-b:a', '192k',     # ses bitrate
+        '-c:a', 'aac',
+        '-ac', '2',
+        '-b:a', '192k',
         '-preset', 'fast',
         '-movflags', '+faststart',
         '-threads', '0',
         '-y', out_location
-        ]
+    ]
 
     process = await asyncio.create_subprocess_exec(
-            *command,
-            # stdout must a pipe to be accessible as process.stdout
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            )
-    
-    # https://github.com/jonghwanhyeon/python-ffmpeg/blob/ccfbba93c46dc0d2cafc1e40ecb71ebf3b5587d2/ffmpeg/ffmpeg.py#L114
-    
+        *command,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+
     await asyncio.wait([
-            read_stderr(start,msg, process),
-            process.wait(),
-        ])
-    
+        read_stderr(start, msg, process),
+        process.wait(),
+    ])
+
     if process.returncode == 0:
-        await msg.edit('Altyazı Ekleme Başarı İle Tamamlandı!\n\nGeçen Süre : {} saniye'.format(round(start-time.time())))
+        elapsed = round(time.time() - start)
+        await msg.edit('Altyazı Ekleme Başarı İle Tamamlandı!\n\nGeçen Süre : {} saniye'.format(elapsed))
     else:
         await msg.edit('Altyazı Eklenirken Bir Hata Oluştu!')
         return False
-    
-    time.sleep(2)
+
+    await asyncio.sleep(2)
     return output
