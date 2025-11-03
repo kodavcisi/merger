@@ -4,6 +4,7 @@ from requests.structures import CaseInsensitiveDict
 
 from bs4 import BeautifulSoup
 import logging
+import os
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     handlers=[logging.FileHandler('log.txt'), logging.StreamHandler()],
                     level=logging.INFO)
@@ -73,6 +74,12 @@ async def planet(bot, message):
            await message.reply_document(
                document=file_name, 
                caption=text)
+           # Clean up downloaded file
+           try:
+               if os.path.exists(file_name):
+                   os.remove(file_name)
+           except Exception:
+               pass
            text = ""
     except Exception as e:
         await message.reply_text(e)
