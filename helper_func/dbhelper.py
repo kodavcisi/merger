@@ -104,7 +104,8 @@ class Database:
             return False
 
     def erase(self, user_id):
-        erase_cmd = f'DELETE FROM muxbot WHERE user_id={user_id};'
+        """Video ve altyazı bilgilerini temizle, thumbnail'i koru"""
+        erase_cmd = f'UPDATE muxbot SET vid_name=NULL, sub_name=NULL, filename=NULL WHERE user_id={user_id};'
         try:
             self.conn.execute(erase_cmd)
             self.conn.commit()
