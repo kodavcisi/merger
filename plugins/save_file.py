@@ -1,4 +1,3 @@
-
 import time
 import os
 
@@ -7,6 +6,7 @@ from config import Config
 from pyrogram import Client, filters
 from helper_func.progress_bar import progress_bar
 from helper_func.dbhelper import Database as Db
+from helper_func.subtitle_extractor import extract_and_send_subtitles
 from plugins.forcesub import handle_force_subscribe
 import re
 import requests
@@ -50,7 +50,6 @@ async def save_doc(bot, message, cb=False):
         og_filename = False
 
     if og_filename:
-        #os.rename(Config.DOWNLOAD_DIR+'/'+tg_filename,Config.DOWNLOAD_DIR+'/'+og_filename)
         save_filename = og_filename
     else :
         save_filename = tg_filename
@@ -75,10 +74,14 @@ async def save_doc(bot, message, cb=False):
     elif ext in ['mp4','mkv']:
         os.rename(Config.DOWNLOAD_DIR+'/'+tg_filename,Config.DOWNLOAD_DIR+'/'+filename)
         db.put_video(chat_id, filename, save_filename)
+        
+        # Video indirildikten sonra altyazıları çıkar ve gönder
+        await extract_and_send_subtitles(bot, chat_id, filename, downloading)
+        
         if db.check_sub(chat_id):
-            text = 'Video Dosyası Başarı ile İndirildi.\nAltyazı Türünü Seç.\n[ /softmux , /hardmux ]'
+            text = 'Video Dosyası Başarı ile İndirildi.\nAltyazı Türünü Seç.\n[ /softmux , /hardmux ]\n\nSes Değiştirmek için:\n[ /dublaj ]'
         else :
-            text = 'Video Dosyası Başarı İle İndirildi.\nŞimdi Altyazı Dosyasını Yolla!'
+            text = 'Video Dosyası Başarı İle İndirildi.\n\nSeçenekler:\n• Altyazı eklemek için: Altyazı dosyası yolla\n• Ses değiştirmek için: /dublaj'
         await bot.edit_message_text(
             text = text,
             chat_id = chat_id,
@@ -141,10 +144,14 @@ async def save_video(bot, message, cb=False):
     os.rename(Config.DOWNLOAD_DIR+'/'+tg_filename,Config.DOWNLOAD_DIR+'/'+filename)
     
     db.put_video(chat_id, filename, save_filename)
+    
+    # Video indirildikten sonra altyazıları çıkar ve gönder
+    await extract_and_send_subtitles(bot, chat_id, filename, downloading)
+    
     if db.check_sub(chat_id):
-        text = 'Video Dosyası Başarı İle İndirildi.\nAltyazı Türünü Seç.\n[ /softmux , /hardmux ]'
+        text = 'Video Dosyası Başarı İle İndirildi.\nAltyazı Türünü Seç.\n[ /softmux , /hardmux ]\n\nSes Değiştirmek için:\n[ /dublaj ]'
     else :
-        text = 'Video Dosyası Başarı İle İndirildi.\nŞimdi Altyazı Dosyasını Yolla!'
+        text = 'Video Dosyası Başarı İle İndirildi.\n\nSeçenekler:\n• Altyazı eklemek için: Altyazı dosyası yolla\n• Ses değiştirmek için: /dublaj'
     await bot.edit_message_text(
             text = text,
             chat_id = chat_id,
@@ -224,6 +231,10 @@ async def save_url(bot, message, cb=False):
         pass
 
     db.put_video(chat_id, filename, save_filename)
+    
+    # Video indirildikten sonra altyazıları çıkar ve gönder
+    await extract_and_send_subtitles(bot, chat_id, filename, sent_msg)
+    
     if db.check_sub(chat_id) :
         text = 'Video Dosyası İndirildi.\nAltyazı Türünü Seç\n[ /softmux , /hardmux ]'
     else :
@@ -232,4 +243,3 @@ async def save_url(bot, message, cb=False):
         await sent_msg.edit(text)
     except:
         pass
-
