@@ -480,11 +480,11 @@ async def process_hardmux(bot, chat_id, og_vid_filename, og_sub_filename, audio_
     # Dosya adının sonunu .mp4 yap
     if original_filename:
         # Uzantıyı kaldır ve .mp4 ekle
-        base_name = '.'.join(original_filename.split('.')[:-1])
+        base_name = os.path.splitext(original_filename)[0]
         final_filename = base_name + '.mp4'
     else:
         # hardmux_filename'den uzantıyı kaldır ve .mp4 ekle
-        base_name = '.'.join(hardmux_filename.split('.')[:-1])
+        base_name = os.path.splitext(hardmux_filename)[0]
         final_filename = base_name + '.mp4'
     
     os.rename(Config.DOWNLOAD_DIR+'/'+hardmux_filename, Config.DOWNLOAD_DIR+'/'+final_filename)
